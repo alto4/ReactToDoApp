@@ -44,9 +44,16 @@ class ToDoList extends React.Component {
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.fetchTasks = this.fetchTasks.bind(this);
+    this.deleteTask = this.deleteTask.bind(this);
+    this.toggleComplete = this.toggleComplete.bind(this);
   }
 
   // Fetch tasks from API once component successfully renders
+  componentDidMount() {
+    this.fetchTasks();
+  }
+
+  // fetchTasks function - retrieves all tasks from API
   fetchTasks() {
     fetch("https://altcademy-to-do-list-api.herokuapp.com/tasks?api_key=175")
       .then(checkStatus)
@@ -78,7 +85,7 @@ class ToDoList extends React.Component {
     }
 
     // Once validated, generate a POST request
-    fetch("https://altcademy-to-do-list-api.herokuapp.com/tasks?api_key=48", {
+    fetch("https://altcademy-to-do-list-api.herokuapp.com/tasks?api_key=175", {
       method: "POST",
       mode: "cors",
       headers: { "Content-Type": "application/json" },
@@ -100,6 +107,63 @@ class ToDoList extends React.Component {
       });
   }
 
+  // deleteTask function - deletes a task based on the targetted button
+  deleteTask(id) {
+    // Ensure that a valid ID is provided or otherwise return early
+    if (!id) {
+      return;
+    }
+
+    // DELETE request - deletes the targetted task and re-renders the list of tasks to reflect the change
+    fetch(
+      `https://altcademy-to-do-list-api.herokuapp.com/tasks/${id}?api_key=175`,
+      {
+        method: "DELETE",
+        mode: "cors",
+      }
+    )
+      .then(checkStatus)
+      .then(json)
+      // Re-render task list to reflect deleted task
+      .then((data) => {
+        this.fetchTasks();
+      })
+      // If the request fails, log the error message in the console
+      .catch((error) => {
+        this.setState({ error: error.message });
+        console.log(error);
+      });
+  }
+
+  // toggleComplete function - marks a task as complete or active
+  toggleComplete(id, completed) {
+    // Return early if no ID is targetted for the PUT request
+    if (!id) {
+      return;
+    }
+
+    // Evaluate the updated status of the task to perform the update
+    const newState = completed ? "active" : "complete";
+
+    // PUT request - updates the status of a task as active/complete
+    fetch(
+      `https://altcademy-to-do-list-api.herokuapp.com/tasks/${id}/mark_${newState}?api_key=175`,
+      {
+        method: "PUT",
+        mode: "cors",
+      }
+    )
+      .then(checkStatus)
+      .then(json)
+      .then((data) => {
+        this.fetchTasks();
+      })
+      .catch((error) => {
+        this.setState({ error: error.message });
+        console.log(error);
+      });
+  }
+
   // render function
   render() {
     const { new_task, tasks } = this.state;
@@ -111,7 +175,14 @@ class ToDoList extends React.Component {
             {tasks.length > 0 ? (
               tasks.map((task) => {
                 // Render each task in the DOM if any exist
-                return <Task key={task.id} task={task} />;
+                return (
+                  <Task
+                    key={task.id}
+                    task={task}
+                    onDelete={this.deleteTask}
+                    onComplete={this.toggleComplete}
+                  />
+                );
               })
             ) : (
               // Display empty status if no tasks exist in returned data
